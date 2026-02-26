@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "devpulse.name" . }}-test-connection"
+  labels:
+    {{- include "devpulse.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "devpulse.name" . }}:{{ .Values.userService.service.port }}/health']
+  restartPolicy: Never

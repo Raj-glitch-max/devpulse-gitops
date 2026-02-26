@@ -1,0 +1,103 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# DevPulse — Docker Compose (V2 - Expanded)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Infrastructure ────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: devpulse-redis
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: devpulse-postgres
+    ports: ["5433:5432"]
+    environment:
+      POSTGRES_DB: devpulse
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d devpulse"]
+      interval: 10s
+    restart: unless-stopped
+
+  # ── Services ──────────────────────────────────────────────────────────────
+  auth-service:
+    build: ./auth-service
+    container_name: devpulse-auth-service
+    environment:
+      - PORT=5004
+      - JWT_SECRET=devpulse-super-secret-key
+    restart: unless-stopped
+
+  user-service:
+    build: ./user-service
+    container_name: devpulse-user-service
+    environment:
+      - PORT=5001
+      - POSTGRES_HOST=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  task-service:
+    build: ./task-service
+    container_name: devpulse-task-service
+    environment:
+      - PORT=5002
+      - USER_SERVICE_URL=http://user-service:5001
+    depends_on:
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  notification-service:
+    build: ./notification-service
+    container_name: devpulse-notification-service
+    environment:
+      - PORT=5003
+      - REDIS_HOST=redis
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  metrics-service:
+    build: ./metrics-service
+    container_name: devpulse-metrics-service
+    environment:
+      - PORT=5005
+    restart: unless-stopped
+
+  # ── API Gateway ──────────────────────────────────────────────────────────
+  api-gateway:
+    build: ./api-gateway
+    container_name: devpulse-api-gateway
+    ports: ["5000:5000"]
+    environment:
+      - PORT=5000
+      - USER_SERVICE_URL=http://user-service:5001
+      - TASK_SERVICE_URL=http://task-service:5002
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5003
+      - AUTH_SERVICE_URL=http://auth-service:5004
+      - METRICS_SERVICE_URL=http://metrics-service:5005
+      - JWT_SECRET=devpulse-super-secret-key
+    depends_on:
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_healthy
+      task-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      metrics-service:
+        condition: service_started
+    restart: unless-stopped

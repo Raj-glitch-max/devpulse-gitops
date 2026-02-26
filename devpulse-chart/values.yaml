@@ -1,0 +1,31 @@
+# Default values for devpulse-chart.
+
+global:
+  namespace: dev
+
+userService:
+  name: user-service
+  replicaCount: 2
+  image:
+    repository: devpulse-user-service
+    tag: latest
+    pullPolicy: Never
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  service:
+    type: NodePort
+    port: 5001
+
+postgres:
+  name: postgres
+  enabled: true
+  image: postgres:16-alpine
+  storage: 1Gi
+  service:
+    port: 5432
+    type: ClusterIP

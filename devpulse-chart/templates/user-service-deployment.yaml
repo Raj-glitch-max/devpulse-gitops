@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.userService.name | quote }}
+  labels:
+    {{- include "devpulse.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.userService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "devpulse.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "devpulse.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:latest
+          imagePullPolicy: {{ .Values.userService.image.pullPolicy | quote }}
+          command:
+            - sh
+            - -c
+            - "until nc -zv postgres 5432; do echo waiting for postgres; sleep 2; done;"
+      containers:
+        - name: {{ .Values.userService.name | quote }}
+          image: "{{ .Values.userService.image.repository }}:{{ .Values.userService.image.tag }}"
+          imagePullPolicy: {{ .Values.userService.image.pullPolicy | quote }}
+          ports:
+            - containerPort: {{ .Values.userService.service.port }}
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: user-service-db-secret
+                  key: POSTGRES_PASSWORD
+          resources:
+{{- toYaml .Values.userService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.userService.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.userService.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5

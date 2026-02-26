@@ -1,0 +1,10 @@
+# Production-specific overrides
+userService:
+  replicaCount: 5
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+postgres:
+  storage: 10Gi

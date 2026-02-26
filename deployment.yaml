@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: user-service
+  name: user-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: user-service
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:latest
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -c
+            - "until nc -zv postgres 5432; do echo waiting for postgres; sleep 2; done;"
+      containers:
+        - image: devpulse-user-service
+          imagePullPolicy: Never
+          name: devpulse-user-service
+          env:
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: user-service-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: user-service-db-secret
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 2
+            periodSeconds: 5
+status: {}

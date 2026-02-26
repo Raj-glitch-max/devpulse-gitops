@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: maintenance-task
+  namespace: dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: busybox:latest
+          imagePullPolicy: Never
+          command: ["echo", "Database optimization complete!"]
+      restartPolicy: Never
+  backoffLimit: 2
