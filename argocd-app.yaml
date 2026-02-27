@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devpulse-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/Raj-glitch-max/devpulse-gitops.git"
+    targetRevision: HEAD
+    path: devpulse-chart
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

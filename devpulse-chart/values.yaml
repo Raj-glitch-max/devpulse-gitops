@@ -9,7 +9,7 @@ userService:
   image:
     repository: devpulse-user-service
     tag: latest
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
   resources:
     requests:
       cpu: 100m
